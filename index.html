@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VT Техподдержка — Оператор L1</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; }
+button { font-family: inherit; cursor: pointer; }
+input, select { font-family: inherit; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+var useState = React.useState;
+var useRef = React.useRef;
+var useEffect = React.useEffect;
+var useCallback = React.useCallback;
+
+var GREEN = "#43A047";
+var BLUE = "#1E88E5";
+var ORANGE = "#FB8C00";
+var PURPLE = "#7C4DFF";
+var RED = "#E53935";
+var YELLOW_BG = "#FFFDE7";
+var G100="#F5F5F5"; var G200="#EEE"; var G300="#E0E0E0"; var G400="#BDBDBD";
+var G500="#9E9E9E"; var G600="#757575"; var G800="#424242"; var G900="#212121";
+
+var STATUSES = {
+  NEW: { label: "Новый", color: GREEN, bg: "#E8F5E9", colTitle: "Новые" },
+  IN_PROGRESS: { label: "В работе", color: BLUE, bg: "#E3F2FD", colTitle: "В работе" },
+  CLARIFICATION: { label: "Уточнение информации", color: ORANGE, bg: "#FFF3E0", colTitle: "Требуется уточнение" },
+  DEV: { label: "Передано в разработку", color: PURPLE, bg: "#EDE7F6", colTitle: "В разработке" },
+  CLOSED: { label: "Закрыто", color: G500, bg: G100, colTitle: "Закрыто" },
+};
+var STATUS_KEYS = ["NEW","IN_PROGRESS","CLARIFICATION","DEV","CLOSED"];
+var TYPES = { bug: { l:"Баг", c:ORANGE, bg:"#FFF3E0" }, question: { l:"Вопрос", c:BLUE, bg:"#E3F2FD" }, idea: { l:"Идея", c:GREEN, bg:"#E8F5E9" } };
+var CLOSE_RESULTS = ["Проблема решена","Не проблема","Не представлены данные","Отложено как идея","Невыполнимо"];
+var PRODUCTS = ["","Объекты","Реклама","Чат","Управление","CRM","Общее"];
+
+var SECTION_TO_PRODUCT = {"Мои объекты":"Объекты","Реклама":"Реклама","Чат":"Чат","CRM":"CRM","Управление":"Управление","Общее":"Общее"};
+
+var TICKETS_INIT = [
+  { id:873985,num:"#4563",title:"Не могу создать объект",section:"Мои объекты",type:"bug",date:"10.09.2025 16:54",status:"NEW",author:"Иванов Дмитрий Петрович",role:"Партнер компании",linkedOrder:null,product:"Объекты",productAuto:true,result:"",initiative:false,critical:false,responsible:"",sourceUrl:"vladis.vt24.ru/objects/5614407",sourceEntity:"Квартира 5614407",msgs:[{f:"u",t:"Не получается создать объект. При нажатии кнопки ничего не происходит.",h:"16:54"}]},
+  { id:873986,num:"#4564",title:"Ошибка выгрузки фида",section:"Реклама",type:"bug",date:"10.09.2025 17:01",status:"NEW",author:"Петрова Елена Сергеевна",role:"Партнер компании",linkedOrder:null,product:"Реклама",productAuto:true,result:"",initiative:false,critical:false,responsible:"",sourceUrl:"vladis.vt24.ru/source/4",sourceEntity:"Яндекс.Недвижимость (ID:4)",msgs:[{f:"u",t:"Фид не выгружается уже 2 дня, ошибка 500.",h:"17:01"}]},
+  { id:873987,num:"#4565",title:"Хочу групповой чат",section:"Чат",type:"idea",date:"11.09.2025 09:12",status:"IN_PROGRESS",author:"Сидоров Алексей",role:"Агент",linkedOrder:null,product:"Чат",productAuto:true,result:"",initiative:true,critical:false,responsible:"Авсенова Елена",sourceUrl:"vladis.vt24.ru/chat",sourceEntity:null,msgs:[{f:"u",t:"Было бы здорово иметь групповой чат с коллегами.",h:"09:12"},{f:"s",t:"Ответственный: Авсенова Елена\nСтатус: В работе",h:"09:30"},{f:"o",t:"Спасибо за идею! Передам продакту.",h:"09:45"}]},
+  { id:873988,num:"#4566",title:"Не вижу контакты клиентов",section:"Управление",type:"question",date:"11.09.2025 10:30",status:"CLARIFICATION",author:"Козлова Марина",role:"Руководитель",linkedOrder:null,product:"Управление",productAuto:true,result:"",initiative:false,critical:false,responsible:"Авсенова Елена",sourceUrl:"vladis.vt24.ru/settings/roles",sourceEntity:null,msgs:[{f:"u",t:"Для юристов должны быть открыты контакты клиентов.",h:"10:30"},{f:"s",t:"Ответственный: Авсенова Елена\nСтатус: В работе",h:"11:00"},{f:"o",t:"В каком разделе не видны контакты?",h:"11:15"}]},
+  { id:873989,num:"#4567",title:"Массовый сбой выгрузки",section:"Реклама",type:"bug",date:"11.09.2025 14:00",status:"DEV",author:"Николаев Пётр",role:"Партнер компании",linkedOrder:"#263816",product:"Реклама",productAuto:true,result:"",initiative:false,critical:true,responsible:"Авсенова Елена",sourceUrl:"vladis.vt24.ru/source/4",sourceEntity:"Яндекс.Недвижимость (ID:4)",msgs:[{f:"u",t:"У нескольких компаний не работает выгрузка.",h:"14:00"},{f:"s",t:"Ответственный: Авсенова Елена\nСтатус: В работе",h:"14:15"},{f:"o",t:"Подтверждаю, передаю в разработку.",h:"14:30"},{f:"s",t:"Передано в разработку. Заказ #263816",h:"14:31"}]},
+  { id:873990,num:"#4568",title:"Вопрос по настройке прав",section:"Управление",type:"question",date:"09.09.2025 11:00",status:"CLOSED",author:"Белова Анна",role:"Партнер компании",linkedOrder:null,product:"Управление",productAuto:true,result:"Проблема решена",initiative:false,critical:false,responsible:"Мамонтов Константин",sourceUrl:"vladis.vt24.ru/settings",sourceEntity:null,msgs:[{f:"u",t:"Как настроить права доступа?",h:"11:00"},{f:"o",t:"Раздел Управление → Роли.",h:"11:30"},{f:"s",t:"Закрыто. Результат: Проблема решена",h:"11:35"}]},
+  { id:873991,num:"#4569",title:"Не работает поиск объектов",section:"Мои объекты",type:"bug",date:"12.09.2025 08:15",status:"NEW",author:"Громова Наталья",role:"Агент",linkedOrder:null,product:"Объекты",productAuto:true,result:"",initiative:false,critical:false,responsible:"",sourceUrl:"vladis.vt24.ru/objects",sourceEntity:null,msgs:[{f:"u",t:"Поиск не возвращает результаты.",h:"08:15"}]},
+  { id:873992,num:"#4570",title:"Проблема с уведомлениями",section:"Общее",type:"bug",date:"12.09.2025 09:00",status:"NEW",author:"Фёдоров Игорь",role:"Партнер компании",linkedOrder:null,product:"Общее",productAuto:true,result:"",initiative:false,critical:false,responsible:"",sourceUrl:"vladis.vt24.ru/notifications",sourceEntity:null,msgs:[{f:"u",t:"Уведомления приходят с задержкой или не приходят.",h:"09:00"}]},
+  { id:873993,num:"#4571",title:"Хочу экспорт в Excel",section:"CRM",type:"idea",date:"12.09.2025 10:22",status:"NEW",author:"Васильева Ольга",role:"Руководитель",linkedOrder:null,product:"CRM",productAuto:true,result:"",initiative:true,critical:false,responsible:"",sourceUrl:"vladis.vt24.ru/crm/deals",sourceEntity:null,msgs:[{f:"u",t:"Нужна возможность экспортировать данные по сделкам.",h:"10:22"}]},
+  { id:873994,num:"#4572",title:"Ошибка при сохранении карточки",section:"Мои объекты",type:"bug",date:"12.09.2025 11:45",status:"NEW",author:"Кузнецов Андрей",role:"Агент",linkedOrder:null,product:"Объекты",productAuto:true,result:"",initiative:false,critical:true,responsible:"",sourceUrl:"vladis.vt24.ru/objects/5567890",sourceEntity:"Квартира 5567890",msgs:[{f:"u",t:"При сохранении карточки объекта ошибка 403.",h:"11:45"}]},
+];
+
+var ORDERS = [
+  { id:"#263816", title:"Разделение чатов с клиентами", tags:["Backend","Развитие"], status:"Тестирование" },
+  { id:"#263900", title:"Ошибка экспорта фидов", tags:["Backend","Баг"], status:"В работе" },
+];
+
+function now(){var d=new Date();return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}
+function avaColor(n){var c=["#E53935","#1E88E5","#43A047","#FB8C00","#8E24AA","#D81B60","#00897B"];return c[n.split("").reduce(function(a,x){return a+x.charCodeAt(0);},0)%c.length];}
+function avaInit(n){return n.split(" ").slice(0,2).map(function(w){return w[0];}).join("");}
+
+function Ava(props){var s=props.size||32;return React.createElement("div",{style:{width:s,height:s,borderRadius:"50%",background:avaColor(props.name),display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:s*.36,fontWeight:600,flexShrink:0}},avaInit(props.name));}
+function SBadge(props){var s=STATUSES[props.status];return React.createElement("span",{style:{fontSize:10,fontWeight:600,color:s.color,background:s.bg,padding:"2px 8px",borderRadius:3,whiteSpace:"nowrap"}},s.label);}
+function TBadge(props){var t=TYPES[props.type];if(!t)return null;return React.createElement("span",{style:{fontSize:10,fontWeight:600,color:t.c,background:t.bg,padding:"2px 6px",borderRadius:3}},t.l);}
+
+// ═══ KANBAN CARD ═══
+function KanbanCard(props){
+  var t=props.ticket;var tp=TYPES[t.type];
+  return React.createElement("div",{
+    onClick:function(){props.onClick(t);},
+    style:{background:"#fff",border:"1px solid "+G200,borderRadius:8,padding:"10px 12px",marginBottom:8,cursor:"pointer",transition:"box-shadow .15s"},
+    onMouseEnter:function(e){e.currentTarget.style.boxShadow="0 2px 8px rgba(0,0,0,.08)";e.currentTarget.style.borderColor=BLUE;},
+    onMouseLeave:function(e){e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor=G200;}
+  },
+    React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
+      React.createElement("div",{style:{display:"flex",gap:4}},
+        React.createElement(SBadge,{status:t.status}),
+        React.createElement(TBadge,{type:t.type})
+      ),
+      React.createElement("div",{style:{display:"flex",gap:-2}},
+        t.responsible && React.createElement(Ava,{name:t.responsible,size:22}),
+        React.createElement(Ava,{name:t.author,size:22})
+      )
+    ),
+    React.createElement("div",{style:{fontSize:13,fontWeight:600,color:G900,marginBottom:4,lineHeight:1.3}},t.title),
+    React.createElement("div",{style:{fontSize:11,color:G500,marginBottom:4}},"📁 "+t.section),
+    t.product && React.createElement("span",{style:{fontSize:10,color:"#7B1FA2",background:"#F3E5F5",padding:"1px 6px",borderRadius:3,marginBottom:4,display:"inline-block"}},t.product),
+    t.linkedOrder && React.createElement("div",{style:{fontSize:11,color:PURPLE,fontWeight:600,marginBottom:4}},"🔗 Заказ "+t.linkedOrder),
+    t.critical && React.createElement("div",{style:{fontSize:10,color:RED,fontWeight:600,marginBottom:4}},"⚠ Критическая"),
+    React.createElement("div",{style:{display:"flex",justifyContent:"space-between",fontSize:11,color:G400}},
+      React.createElement("span",null,t.num),
+      React.createElement("span",null,t.date)
+    )
+  );
+}
+
+// ═══ TICKET DETAIL ═══
+function TicketDetail(props){
+  var ticket=props.ticket;var onBack=props.onBack;var onUpdate=props.onUpdate;
+  var _msg=useState("");var msg=_msg[0];var setMsg=_msg[1];
+  var _showClose=useState(false);var showClose=_showClose[0];var setShowClose=_showClose[1];
+  var _showOrder=useState(false);var showOrder=_showOrder[0];var setShowOrder=_showOrder[1];
+  var ref=useRef(null);
+  var st=STATUSES[ticket.status];
+  var isClosed=ticket.status==="CLOSED";
+
+  useEffect(function(){if(ref.current)ref.current.scrollIntoView({behavior:"smooth"});},[ticket.msgs.length]);
+
+  function sendMsg(){
+    if(!msg.trim())return;
+    var u={...ticket,msgs:ticket.msgs.concat([{f:"o",t:msg.trim(),h:now()}])};
+    onUpdate(u);setMsg("");
+  }
+  function takeToWork(){
+    var r=ticket.responsible||"Авсенова Елена";
+    onUpdate({...ticket,status:"IN_PROGRESS",responsible:r,msgs:ticket.msgs.concat([{f:"s",t:"Ответственный: "+r+"\nСтатус: В работе",h:now()}])});
+  }
+  function pauseTicket(){onUpdate({...ticket,status:"CLARIFICATION"});}
+  function transferToDev(orderId){
+    onUpdate({...ticket,status:"DEV",linkedOrder:orderId,msgs:ticket.msgs.concat([{f:"s",t:"Передано в разработку. Заказ "+orderId,h:now()}])});
+    setShowOrder(false);
+  }
+  function closeTicket(result){
+    onUpdate({...ticket,status:"CLOSED",result:result,msgs:ticket.msgs.concat([{f:"s",t:"Закрыто. Результат: "+result,h:now()}])});
+    setShowClose(false);
+  }
+  function simulateReply(){
+    var replies=["Спасибо, проверю!","Да, проблема повторяется","Вот скриншот ошибки","Понял, жду"];
+    var text=replies[Math.floor(Math.random()*replies.length)];
+    var msgs2=ticket.msgs.concat([{f:"u",t:text,h:now()}]);
+    var newStatus=ticket.status;
+    if(ticket.status==="CLARIFICATION"){newStatus="IN_PROGRESS";msgs2=msgs2.concat([{f:"s",t:"Статус: В работе (ответ пользователя)",h:now()}]);}
+    onUpdate({...ticket,status:newStatus,msgs:msgs2});
+  }
+
+  var canTake=ticket.status==="NEW"||ticket.status==="CLARIFICATION";
+  var canPause=ticket.status==="IN_PROGRESS";
+  var canTransfer=ticket.status==="IN_PROGRESS";
+  var canClose=ticket.status==="IN_PROGRESS"||ticket.status==="DEV";
+
+  return React.createElement("div",{style:{height:"100vh",display:"flex",flexDirection:"column",background:"#fff"}},
+    // Header
+    React.createElement("div",{style:{padding:"10px 16px",borderBottom:"1px solid "+G200,display:"flex",alignItems:"center",gap:10,flexShrink:0}},
+      React.createElement("button",{onClick:onBack,style:{background:"none",border:"none",fontSize:18,color:G500}},"←"),
+      React.createElement("span",{style:{fontSize:13,color:G500}},"Техподдержка"),
+      React.createElement("span",{style:{color:G300}},"›"),
+      React.createElement("span",{style:{fontSize:13,fontWeight:600,color:G900}},ticket.id),
+      React.createElement("div",{style:{flex:1}}),
+      React.createElement("button",{onClick:onBack,style:{background:"none",border:"none",fontSize:16,color:G400}},"✕")
+    ),
+    // Main
+    React.createElement("div",{style:{flex:1,display:"flex",overflow:"hidden"}},
+      // CHAT
+      React.createElement("div",{style:{flex:1,display:"flex",flexDirection:"column",borderRight:"1px solid "+G200}},
+        // Chat header
+        React.createElement("div",{style:{padding:"10px 16px",borderBottom:"1px solid "+G200,display:"flex",alignItems:"center",gap:10,flexShrink:0}},
+          React.createElement(Ava,{name:ticket.author,size:36}),
+          React.createElement("div",null,
+            React.createElement("div",{style:{fontSize:14,fontWeight:600,color:G900}},ticket.author),
+            React.createElement("div",{style:{fontSize:12,color:G500}},ticket.role)
+          ),
+          React.createElement("div",{style:{flex:1}}),
+          React.createElement("span",{style:{fontSize:12,color:G500,background:G100,padding:"3px 8px",borderRadius:4}},"📁 "+ticket.section)
+        ),
+        // Messages
+        React.createElement("div",{style:{flex:1,overflow:"auto",background:"linear-gradient(180deg,#C8E6C9 0%,#E8F5E9 40%,#FFFDE7 100%)",padding:"10px 16px"}},
+          React.createElement("div",{style:{textAlign:"center",marginBottom:8}},
+            React.createElement("button",{onClick:simulateReply,style:{padding:"3px 10px",borderRadius:10,border:"1px dashed "+G400,background:"rgba(255,255,255,.6)",fontSize:11,color:G600}},"⚡ Ответ пользователя")
+          ),
+          ticket.msgs.map(function(m,i){
+            if(m.f==="s")return React.createElement("div",{key:i,style:{display:"flex",justifyContent:"center",margin:"8px 0"}},React.createElement("div",{style:{background:"rgba(255,255,255,.8)",borderRadius:8,padding:"6px 12px",fontSize:11,color:G600,textAlign:"center",lineHeight:1.5,maxWidth:260,whiteSpace:"pre-line"}},m.t));
+            var isU=m.f==="u";
+            return React.createElement("div",{key:i,style:{display:"flex",justifyContent:isU?"flex-start":"flex-end",marginBottom:6}},
+              React.createElement("div",{style:{maxWidth:"70%",padding:"8px 12px",borderRadius:isU?"2px 12px 12px 12px":"12px 2px 12px 12px",background:isU?"rgba(255,255,255,.9)":"#DCF8C6",boxShadow:"0 1px 1px rgba(0,0,0,.04)"}},
+                React.createElement("div",{style:{fontSize:13,color:G900,lineHeight:1.4}},m.t),
+                React.createElement("div",{style:{fontSize:9,color:G400,textAlign:"right",marginTop:2}},m.h,!isU&&" ✓✓")
+              )
+            );
+          }),
+          React.createElement("div",{ref:ref})
+        ),
+        // Input
+        React.createElement("div",{style:{padding:"8px 16px",borderTop:"1px solid "+G200,display:"flex",alignItems:"center",gap:8,flexShrink:0,background:"#fff"}},
+          React.createElement("span",{style:{color:G400,fontSize:16}},"📎"),
+          React.createElement("input",{value:msg,onChange:function(e){setMsg(e.target.value);},onKeyDown:function(e){if(e.key==="Enter")sendMsg();},placeholder:isClosed?"Обращение закрыто":"Сообщение...",disabled:isClosed,style:{flex:1,padding:"8px 12px",border:"1px solid "+G200,borderRadius:18,fontSize:13,outline:"none",background:isClosed?G100:"#fff"}}),
+          React.createElement("button",{onClick:sendMsg,disabled:!msg.trim()||isClosed,style:{width:32,height:32,borderRadius:"50%",border:"none",background:msg.trim()&&!isClosed?GREEN:G300,color:msg.trim()&&!isClosed?"#fff":G400,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}},"➤")
+        )
+      ),
+      // SIDEBAR
+      React.createElement("div",{style:{width:340,overflow:"auto",padding:16,flexShrink:0}},
+        // Status + ID
+        React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
+          React.createElement(SBadge,{status:ticket.status}),
+          React.createElement("span",{style:{fontSize:12,color:G500}},"ID: "+ticket.id+" 📋")
+        ),
+        // Actions
+        canTake && React.createElement("button",{onClick:takeToWork,style:{width:"100%",padding:"10px 0",borderRadius:8,border:"none",background:GREEN,color:"#fff",fontSize:13,fontWeight:600,marginBottom:10}},"Взять в работу"),
+        canTransfer && React.createElement("button",{onClick:function(){setShowOrder(true);},style:{width:"100%",padding:"10px 0",borderRadius:8,border:"none",background:ORANGE,color:"#fff",fontSize:13,fontWeight:600,marginBottom:8}},"Передать в разработку"),
+        canPause && React.createElement("button",{onClick:pauseTicket,style:{width:"100%",padding:"10px 0",borderRadius:8,border:"1px solid "+BLUE,background:"#fff",color:BLUE,fontSize:13,marginBottom:8}},"На паузу (уточнение)"),
+        canClose && React.createElement("button",{onClick:function(){setShowClose(true);},style:{width:"100%",padding:"10px 0",borderRadius:8,border:"1px solid "+G300,background:"#fff",color:G600,fontSize:13,marginBottom:8}},"Закрыть обращение"),
+
+        // SOURCE CONTEXT (auto-captured from user side)
+        React.createElement("div",{style:{background:"#F3E5F5",border:"1px solid #CE93D8",borderRadius:10,padding:12,marginBottom:12}},
+          React.createElement("div",{style:{fontSize:10,fontWeight:700,color:PURPLE,marginBottom:6}},"📍 ОТКУДА НАПИСАЛ ПОЛЬЗОВАТЕЛЬ"),
+          React.createElement("div",{style:{fontSize:13,fontWeight:600,color:G900,marginBottom:2}},ticket.section),
+          ticket.sourceEntity && React.createElement("div",{style:{fontSize:12,color:G600,marginBottom:2}},ticket.sourceEntity),
+          React.createElement("div",{style:{fontSize:11,color:PURPLE,cursor:"pointer"}},"🔗 "+ticket.sourceUrl),
+          React.createElement("div",{style:{fontSize:10,color:G500,marginTop:4}},"📷 Скриншот прикреплён")
+        ),
+
+        // DEV TASK LINK (prominent)
+        ticket.linkedOrder && React.createElement("div",{style:{padding:14,background:"#EDE7F6",border:"2px solid "+PURPLE,borderRadius:10,marginBottom:16}},
+          React.createElement("div",{style:{fontSize:11,fontWeight:600,color:PURPLE,marginBottom:4}},"🔗 СВЯЗАННАЯ ЗАДАЧА В РАЗРАБОТКЕ"),
+          React.createElement("div",{style:{fontSize:18,fontWeight:700,color:PURPLE,marginBottom:4}},ticket.linkedOrder),
+          React.createElement("div",{style:{fontSize:11,color:G600}},"Нажмите чтобы перейти к заказу в разработку"),
+          React.createElement("div",{style:{fontSize:11,color:G500,marginTop:6,lineHeight:1.4}},"💡 Комментарии разработки в заказе. Пользователь их не видит.")
+        ),
+
+        // Fields
+        React.createElement("div",{style:{borderTop:"1px solid "+G200,paddingTop:12,marginTop:8}},
+          React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0"}},
+            React.createElement("span",{style:{fontSize:12,color:G600}},"Тип"),
+            React.createElement(TBadge,{type:ticket.type})
+          ),
+          ticket.responsible && React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0"}},
+            React.createElement("span",{style:{fontSize:12,color:G600}},"Ответственный"),
+            React.createElement("div",{style:{display:"flex",alignItems:"center",gap:6}},React.createElement(Ava,{name:ticket.responsible,size:20}),React.createElement("span",{style:{fontSize:12}},ticket.responsible))
+          ),
+          React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0"}},
+            React.createElement("span",{style:{fontSize:12,color:G600}},"Продукт"),
+            React.createElement("div",{style:{display:"flex",alignItems:"center",gap:4}},
+              React.createElement("select",{value:ticket.product,onChange:function(e){onUpdate({...ticket,product:e.target.value,productAuto:false});},disabled:isClosed,style:{padding:"3px 6px",border:"1px solid "+G200,borderRadius:4,fontSize:12,outline:"none"}},
+                PRODUCTS.map(function(p){return React.createElement("option",{key:p,value:p},p||"—");})
+              ),
+              ticket.productAuto && React.createElement("span",{style:{fontSize:9,color:GREEN,background:"#E8F5E9",padding:"1px 5px",borderRadius:3,fontWeight:600}},"авто")
+            )
+          ),
+          ticket.result && React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0"}},
+            React.createElement("span",{style:{fontSize:12,color:G600}},"Результат"),
+            React.createElement("span",{style:{fontSize:12,fontWeight:600,color:GREEN}},ticket.result)
+          ),
+          React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0"}},
+            React.createElement("span",{style:{fontSize:12,color:G600}},"Инициатива"),
+            React.createElement("span",{style:{fontSize:12}},ticket.initiative?"Да":"Нет")
+          ),
+          React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0"}},
+            React.createElement("span",{style:{fontSize:12,color:G600}},"Критическая"),
+            React.createElement("span",{style:{fontSize:12,color:ticket.critical?RED:G500}},ticket.critical?"⚠ Да":"Нет")
+          )
+        )
+      )
+    ),
+    // Modals
+    showClose && React.createElement(CloseModal,{onClose:function(){setShowClose(false);},onConfirm:closeTicket}),
+    showOrder && React.createElement(OrderModal,{onClose:function(){setShowOrder(false);},onSelect:transferToDev})
+  );
+}
+
+// ═══ CLOSE MODAL ═══
+function CloseModal(props){
+  var _r=useState("");var result=_r[0];var setResult=_r[1];
+  return React.createElement("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.35)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200},onClick:props.onClose},
+    React.createElement("div",{onClick:function(e){e.stopPropagation();},style:{background:"#fff",borderRadius:12,padding:24,width:380,boxShadow:"0 16px 48px rgba(0,0,0,.15)"}},
+      React.createElement("div",{style:{fontSize:16,fontWeight:700,marginBottom:16}},"Закрыть обращение"),
+      React.createElement("div",{style:{fontSize:13,fontWeight:600,marginBottom:10}},"Результат *"),
+      React.createElement("div",{style:{display:"flex",flexWrap:"wrap",gap:8,marginBottom:20}},
+        CLOSE_RESULTS.map(function(r){return React.createElement("button",{key:r,onClick:function(){setResult(r);},style:{padding:"8px 12px",borderRadius:6,fontSize:12,border:result===r?"2px solid "+BLUE:"1px solid "+G300,background:result===r?"#E3F2FD":"#fff",color:result===r?BLUE:G800,fontWeight:result===r?600:400}},r);})
+      ),
+      React.createElement("div",{style:{display:"flex",gap:8,justifyContent:"flex-end"}},
+        React.createElement("button",{onClick:props.onClose,style:{padding:"10px 18px",borderRadius:6,border:"1px solid "+G300,background:"#fff",fontSize:13,color:G600}},"Отмена"),
+        React.createElement("button",{onClick:function(){if(result)props.onConfirm(result);},disabled:!result,style:{padding:"10px 18px",borderRadius:6,border:"none",background:result?GREEN:G300,color:result?"#fff":G400,fontSize:13,fontWeight:600}},"Закрыть")
+      )
+    )
+  );
+}
+
+// ═══ ORDER MODAL ═══
+function OrderModal(props){
+  return React.createElement("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.35)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200},onClick:props.onClose},
+    React.createElement("div",{onClick:function(e){e.stopPropagation();},style:{background:"#fff",borderRadius:12,padding:24,width:420,boxShadow:"0 16px 48px rgba(0,0,0,.15)"}},
+      React.createElement("div",{style:{fontSize:16,fontWeight:700,marginBottom:16}},"Выбрать заказ в разработку"),
+      React.createElement("div",{style:{display:"flex",gap:8,marginBottom:16}},
+        React.createElement("input",{placeholder:"Найти...",style:{flex:1,padding:"8px 12px",border:"1px solid "+G300,borderRadius:6,fontSize:13,outline:"none"}}),
+        React.createElement("button",{style:{padding:"8px 16px",borderRadius:6,border:"none",background:"#F5C518",color:G900,fontSize:13,fontWeight:600}},"Создать")
+      ),
+      ORDERS.map(function(o){return React.createElement("div",{key:o.id,onClick:function(){props.onSelect(o.id);},style:{padding:12,border:"1px solid "+G200,borderRadius:8,marginBottom:8,cursor:"pointer"},onMouseEnter:function(e){e.currentTarget.style.borderColor=PURPLE;},onMouseLeave:function(e){e.currentTarget.style.borderColor=G200;}},
+        React.createElement("div",{style:{display:"flex",justifyContent:"space-between",marginBottom:4}},
+          React.createElement("span",{style:{fontSize:12,color:PURPLE,fontWeight:600}},o.status),
+          React.createElement("span",{style:{fontSize:12,color:G500}},o.id)
+        ),
+        React.createElement("div",{style:{fontSize:14,fontWeight:600,color:G900,marginBottom:4}},o.title),
+        React.createElement("div",{style:{display:"flex",gap:4}},o.tags.map(function(tag){return React.createElement("span",{key:tag,style:{padding:"2px 6px",borderRadius:3,background:G100,fontSize:11,color:G600}},tag);}))
+      );})
+    )
+  );
+}
+
+// ═══ MAIN APP ═══
+function App(){
+  var _tickets=useState(TICKETS_INIT);var tickets=_tickets[0];var setTickets=_tickets[1];
+  var _selected=useState(null);var selectedId=_selected[0];var setSelectedId=_selected[1];
+  var _typeFilter=useState("");var typeFilter=_typeFilter[0];var setTypeFilter=_typeFilter[1];
+  var _prodFilter=useState("");var prodFilter=_prodFilter[0];var setProdFilter=_prodFilter[1];
+
+  function updateTicket(updated){setTickets(function(prev){return prev.map(function(t){return t.id===updated.id?updated:t;});});}
+
+  var selected=tickets.find(function(t){return t.id===selectedId;});
+  if(selected)return React.createElement(TicketDetail,{ticket:selected,onBack:function(){setSelectedId(null);},onUpdate:updateTicket});
+
+  var filtered=tickets.filter(function(t){
+    if(typeFilter && t.type!==typeFilter) return false;
+    if(prodFilter && t.product!==prodFilter) return false;
+    return true;
+  });
+  var byStatus={};STATUS_KEYS.forEach(function(k){byStatus[k]=filtered.filter(function(t){return t.status===k;});});
+
+  return React.createElement("div",{style:{height:"100vh",display:"flex",flexDirection:"column",background:"#fff",overflow:"hidden"}},
+    // Header
+    React.createElement("div",{style:{height:50,background:YELLOW_BG,borderBottom:"1px solid "+G200,display:"flex",alignItems:"center",padding:"0 16px",gap:10,flexShrink:0}},
+      React.createElement("span",{style:{fontSize:20,color:G600}},"☰"),
+      React.createElement("span",{style:{fontSize:14,color:G500}},"Рабочий стол"),
+      React.createElement("span",{style:{fontSize:16,color:GREEN,fontWeight:700}},"🏠 ВЛАДИС"),
+      React.createElement("div",{style:{flex:1,display:"flex",justifyContent:"center"}},
+        React.createElement("input",{placeholder:"Поиск...",style:{width:240,padding:"6px 12px 6px 28px",border:"1px solid "+G300,borderRadius:20,fontSize:13,outline:"none"}})
+      ),
+      React.createElement("span",{style:{padding:"3px 8px",background:"#F5C518",borderRadius:4,fontWeight:700,fontSize:11}},"GPT-VT"),
+      React.createElement("span",{style:{color:G500,fontSize:16}},"❓"),
+      React.createElement("span",{style:{color:G500,fontSize:16}},"♡"),
+      React.createElement("span",{style:{color:G500,fontSize:16}},"🔔"),
+      React.createElement("span",{style:{color:G500,fontSize:16}},"💬")
+    ),
+    // Toolbar — single filter row (no duplicates)
+    React.createElement("div",{style:{padding:"8px 16px",borderBottom:"1px solid "+G200,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",flexShrink:0}},
+      React.createElement("span",{style:{fontSize:13,color:G600,fontWeight:600}},"Тип:"),
+      ["",  "bug","question","idea"].map(function(k){
+        var label=k?TYPES[k].l:"Все";
+        var count=k?tickets.filter(function(t){return t.type===k;}).length:tickets.length;
+        var active=typeFilter===k;
+        return React.createElement("button",{key:k,onClick:function(){setTypeFilter(k);},style:{
+          padding:"4px 12px",borderRadius:16,fontSize:12,
+          border:active?"1px solid "+BLUE:"1px solid "+G300,
+          background:active?"#E3F2FD":"#fff",
+          color:active?BLUE:G600,fontWeight:active?600:400,
+        }},label+" ("+count+")");
+      }),
+      React.createElement("span",{style:{width:1,height:20,background:G300,margin:"0 4px"}}),
+      React.createElement("span",{style:{fontSize:13,color:G600,fontWeight:600}},"Продукт:"),
+      React.createElement("select",{value:prodFilter,onChange:function(e){setProdFilter(e.target.value);},style:{padding:"4px 8px",border:"1px solid "+G300,borderRadius:16,fontSize:12,outline:"none",color:prodFilter?PURPLE:G600,background:prodFilter?"#F3E5F5":"#fff"}},
+        React.createElement("option",{value:""},"Все"),
+        PRODUCTS.filter(function(p){return p;}).map(function(p){return React.createElement("option",{key:p,value:p},p);})
+      ),
+      React.createElement("div",{style:{flex:1}}),
+      React.createElement("span",{style:{fontSize:12,color:G500}},"Показано "+filtered.length),
+      React.createElement("button",{onClick:function(){setTypeFilter("");setProdFilter("");},style:{background:"none",border:"none",color:BLUE,fontSize:12,fontWeight:500}},"Сбросить"),
+      React.createElement("span",{style:{padding:"3px 8px",border:"1px solid "+G300,borderRadius:4,fontSize:12,color:G600}},"Действия ▾")
+    ),
+    // Kanban
+    React.createElement("div",{style:{flex:1,display:"flex",gap:0,overflow:"auto",padding:"0"}},
+      STATUS_KEYS.map(function(key){
+        var st=STATUSES[key];
+        var cards=byStatus[key]||[];
+        return React.createElement("div",{key:key,style:{flex:1,minWidth:230,borderRight:"1px solid "+G200,display:"flex",flexDirection:"column"}},
+          // Column header
+          React.createElement("div",{style:{padding:"10px 12px",borderBottom:"1px solid "+G200,display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0,background:st.bg}},
+            React.createElement("span",{style:{fontSize:13,fontWeight:700,color:st.color}},st.colTitle),
+            React.createElement("span",{style:{fontSize:13,color:st.color,fontWeight:600}},cards.length)
+          ),
+          // Cards
+          React.createElement("div",{style:{flex:1,overflow:"auto",padding:8}},
+            cards.map(function(t){return React.createElement(KanbanCard,{key:t.id,ticket:t,onClick:function(){setSelectedId(t.id);}});})
+          )
+        );
+      })
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
